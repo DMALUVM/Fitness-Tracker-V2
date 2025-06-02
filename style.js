@@ -1,31 +1,29 @@
-// Fitness Tracker JavaScript with Circular Progress, Streaks, and Persistent Storage
-
 const defaultGoals = {
   pushups: 200,
   pullups: 20,
   squats: 200
 };
 
-let goals = JSON.parse(localStorage.getItem("goals")) || defaultGoals;
-let activityData = JSON.parse(localStorage.getItem("activityData") || '{}');
+let goals = { ...defaultGoals };
+let activityData = JSON.parse(localStorage.getItem('activityData') || '{}');
 const todayStr = new Date().toISOString().split('T')[0];
 
 function saveGoals() {
-  goals.pushups = parseInt(document.getElementById("goalPushups").value) || 0;
-  goals.pullups = parseInt(document.getElementById("goalPullups").value) || 0;
-  goals.squats = parseInt(document.getElementById("goalSquats").value) || 0;
-  localStorage.setItem("goals", JSON.stringify(goals));
-  updateProgress();
+  goals.pushups = parseInt(document.getElementById('goalPushups').value) || 0;
+  goals.pullups = parseInt(document.getElementById('goalPullups').value) || 0;
+  goals.squats = parseInt(document.getElementById('goalSquats').value) || 0;
+  localStorage.setItem('goals', JSON.stringify(goals));
+  updateProgressBars();
   renderCalendar();
   updateSummary();
 }
 
 function saveTodayEntry() {
   const newEntry = {
-    pushups: parseInt(document.getElementById("pushups").value) || 0,
-    pullups: parseInt(document.getElementById("pullups").value) || 0,
-    squats: parseInt(document.getElementById("squats").value) || 0,
-    deadHang: document.getElementById("deadHang").value || ""
+    pushups: parseInt(document.getElementById('pushups').value) || 0,
+    pullups: parseInt(document.getElementById('pullups').value) || 0,
+    squats: parseInt(document.getElementById('squats').value) || 0,
+    deadHang: document.getElementById('deadHang').value || ""
   };
 
   const existing = activityData[todayStr] || { pushups: 0, pullups: 0, squats: 0, deadHang: "" };
@@ -37,58 +35,104 @@ function saveTodayEntry() {
   };
 
   activityData[todayStr] = updatedEntry;
-  localStorage.setItem("activityData", JSON.stringify(activityData));
-
-  ["pushups", "pullups", "squats", "deadHang"].forEach(id => document.getElementById(id).value = "");
-
-  updateProgress();
+  localStorage.setItem('activityData', JSON.stringify(activityData));
+  updateProgressBars();
   renderCalendar();
   updateSummary();
+  syncToGoogleSheets(todayStr, updatedEntry);
+
+  document.getElementById('pushups').value = '';
+  document.getElementById('pullups').value = '';
+  document.getElementById('squats').value = '';
+  document.getElementById('deadHang').value = '';
 }
 
-function updateProgress() {
-  const today = activityData[todayStr] || { pushups: 0, pullups: 0, squats: 0 };
-  updateRing("pushupRing", today.pushups, goals.pushups);
-  updateRing("pullupRing", today.pullups, goals.pullups);
-  updateRing("squatRing", today.squats, goals.squats);
+function syncToGoogleSheets(date, entry) {
+  const status = document.getElementById('syncStatus');
+  status.textContent = 'Saving...';
+  status.className = 'sync-status loading';
+
+  fetch("https://script.google.com/macros/s/AKfycby6_cBMbcJ4fsBvAfwOJe0gfzhNZWCE7onx5iuAMoUnFFlD2WHRVoMKDWciO4LpAva7/exec", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      date: date,
+      pushups: entry.pushups,
+      pullups: entry.pullups,
+      squats: entry.squats,
+      deadHang: entry.deadHang
+    })
+  })
+  .then(res => res.text())
+  .then(msg => {
+    status.textContent = 'Saved ✅';
+    status.className = 'sync-status success';
+    setTimeout(() => status.textContent = '', 3000);
+    console.log("✅ Google Sheets Backup:", msg);
+  })
+  .catch(err => {
+    status.textContent = 'Error ❌';
+    status.className = 'sync-status error';
+    console.error("❌ Google Sheets Backup Failed:", err);
+  });
 }
 
-function updateRing(id, value, goal) {
-  const ring = document.querySelector(`#${id} .progress-ring-fill`);
+function updateProgressBars() {
+  const data = activityData[todayStr] || { pushups: 0, pullups: 0, squats: 0 };
+
+  updateBarWithTotal('progressPushups', data.pushups, goals.pushups);
+  updateBarWithTotal('progressPullups', data.pullups, goals.pullups);
+  updateBarWithTotal('progressSquats', data.squats, goals.squats);
+}
+
+function updateBarWithTotal(id, value, goal) {
   const percent = Math.min((value / goal) * 100, 100);
-  ring.style.strokeDashoffset = 283 - (283 * percent / 100);
-  document.querySelector(`#${id} .progress-label`).textContent = `${value}/${goal}`;
+  const barContainer = document.getElementById(id);
+  const bar = barContainer.firstElementChild;
+  bar.style.width = percent + "%";
+  bar.style.backgroundColor = percent >= 100 ? "green" : (percent >= 50 ? "orange" : "red");
+
+  if (!barContainer.dataset.label) {
+    const label = document.createElement('span');
+    label.className = 'bar-total-label';
+    label.style.marginLeft = '10px';
+    label.style.fontWeight = 'bold';
+    barContainer.appendChild(label);
+    barContainer.dataset.label = 'true';
+  }
+  barContainer.querySelector('.bar-total-label').textContent = `${value}/${goal}`;
 }
 
-function calculateStreak() {
-  const sortedDates = Object.keys(activityData).sort().reverse();
-  let streak = 0;
-  let currentDate = new Date();
+document.getElementById('saveEntry').addEventListener('click', saveTodayEntry);
+document.querySelectorAll('.goals-section input').forEach(input => {
+  input.addEventListener('change', saveGoals);
+});
 
-  for (let dateStr of sortedDates) {
-    const entry = activityData[dateStr];
-    if (
-      entry.pushups >= goals.pushups &&
-      entry.pullups >= goals.pullups &&
-      entry.squats >= goals.squats
-    ) {
-      const entryDate = new Date(dateStr);
-      if (entryDate.toDateString() === currentDate.toDateString()) {
-        streak++;
-        currentDate.setDate(currentDate.getDate() - 1);
-      } else {
-        break;
-      }
-    } else {
-      break;
-    }
-  }
-  document.getElementById("streakCount").textContent = `🔥 ${streak} day streak`;
+document.getElementById('closeModal').addEventListener('click', () => {
+  document.getElementById('editModal').classList.add('hidden');
+});
+document.getElementById('saveEdit').addEventListener('click', saveEditEntry);
+
+function saveEditEntry() {
+  const dateStr = document.getElementById('editModal').dataset.date;
+  const entry = {
+    pushups: parseInt(document.getElementById('editPushups').value) || 0,
+    pullups: parseInt(document.getElementById('editPullups').value) || 0,
+    squats: parseInt(document.getElementById('editSquats').value) || 0,
+    deadHang: document.getElementById('editDeadHang').value || ''
+  };
+  activityData[dateStr] = entry;
+  localStorage.setItem('activityData', JSON.stringify(activityData));
+  renderCalendar();
+  updateSummary();
+  if (dateStr === todayStr) updateProgressBars();
+  syncToGoogleSheets(dateStr, entry);
+  document.getElementById('editModal').classList.add('hidden');
 }
 
 function renderCalendar() {
-  const calendar = document.getElementById("calendar");
-  calendar.innerHTML = "";
+  const calendar = document.getElementById('calendar');
+  calendar.innerHTML = '';
 
   const now = new Date();
   const year = now.getFullYear();
@@ -98,54 +142,73 @@ function renderCalendar() {
   let date = new Date(firstDay);
   date.setDate(date.getDate() - firstDay.getDay());
 
-  document.getElementById("calendarMonthYear").textContent = `${now.toLocaleString('default', { month: 'long' })} ${year}`;
+  const monthNames = ["January", "February", "March", "April", "May", "June",
+                      "July", "August", "September", "October", "November", "December"];
+  document.getElementById('calendarMonthYear').textContent = `${monthNames[month]} ${year}`;
 
   while (date <= lastDay || date.getDay() !== 0) {
-    const dateStr = date.toISOString().split("T")[0];
-    const dayBox = document.createElement("div");
-    dayBox.className = "calendar-day";
+    const dayBox = document.createElement('div');
+    dayBox.className = 'calendar-day';
+    const dateStr = date.toISOString().split('T')[0];
 
-    if (dateStr === todayStr) dayBox.classList.add("today");
+    if (dateStr === todayStr) {
+      dayBox.style.border = '2px solid #007bff';
+    }
+
     dayBox.innerHTML = `<div class="date-label">${date.getDate()}</div>`;
 
     if (activityData[dateStr]) {
       const d = activityData[dateStr];
       const indicators = [
-        d.pushups >= goals.pushups ? "✅" : d.pushups > 0 ? "⚠️" : "❌",
-        d.pullups >= goals.pullups ? "✅" : d.pullups > 0 ? "⚠️" : "❌",
-        d.squats >= goals.squats ? "✅" : d.squats > 0 ? "⚠️" : "❌"
-      ].map(e => `<span>${e}</span>`).join("");
+        d.pushups >= goals.pushups ? '✅' : (d.pushups > 0 ? '⚠️' : '❌'),
+        d.pullups >= goals.pullups ? '✅' : (d.pullups > 0 ? '⚠️' : '❌'),
+        d.squats >= goals.squats ? '✅' : (d.squats > 0 ? '⚠️' : '❌')
+      ].map(e => `<span>${e}</span>`).join('');
+      const deadHang = d.deadHang || '';
       dayBox.innerHTML += `<div class="emoji-indicators">${indicators}</div>`;
-      if (d.deadHang) dayBox.innerHTML += `<div class="dead-hang-label">⏱ ${d.deadHang}</div>`;
+      if (deadHang) dayBox.innerHTML += `<div>⏱ ${deadHang}</div>`;
     }
 
+    dayBox.addEventListener('click', () => openEditModal(dateStr));
     calendar.appendChild(dayBox);
     date.setDate(date.getDate() + 1);
   }
 }
 
+function openEditModal(dateStr) {
+  const d = activityData[dateStr] || { pushups: 0, pullups: 0, squats: 0, deadHang: "" };
+  document.getElementById('editDateLabel').textContent = dateStr;
+  document.getElementById('editPushups').value = d.pushups;
+  document.getElementById('editPullups').value = d.pullups;
+  document.getElementById('editSquats').value = d.squats;
+  document.getElementById('editDeadHang').value = d.deadHang;
+  document.getElementById('editModal').dataset.date = dateStr;
+  document.getElementById('editModal').classList.remove('hidden');
+}
+
 function updateSummary() {
   const now = new Date();
-  const startOfWeek = new Date(now); startOfWeek.setDate(now.getDate() - now.getDay());
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay());
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const startOfYear = new Date(now.getFullYear(), 0, 1);
 
-  const totals = { week: {}, month: {}, year: {}, allTime: {} };
-  ["pushups", "pullups", "squats"].forEach(key => {
-    totals.week[key] = totals.month[key] = totals.year[key] = totals.allTime[key] = 0;
-  });
+  const totals = {
+    week: { pushups: 0, pullups: 0, squats: 0 },
+    month: { pushups: 0, pullups: 0, squats: 0 },
+    year: { pushups: 0, pullups: 0, squats: 0 },
+    allTime: { pushups: 0, pullups: 0, squats: 0 }
+  };
 
   for (const [dateStr, data] of Object.entries(activityData)) {
     const date = new Date(dateStr);
-    ["pushups", "pullups", "squats"].forEach(key => {
-      if (date >= startOfWeek) totals.week[key] += data[key] || 0;
-      if (date >= startOfMonth) totals.month[key] += data[key] || 0;
-      if (date >= startOfYear) totals.year[key] += data[key] || 0;
-      totals.allTime[key] += data[key] || 0;
-    });
+    if (date >= startOfWeek) addToTotals(totals.week, data);
+    if (date >= startOfMonth) addToTotals(totals.month, data);
+    if (date >= startOfYear) addToTotals(totals.year, data);
+    addToTotals(totals.allTime, data);
   }
 
-  document.getElementById("summary").innerHTML = `
+  document.getElementById('summary').innerHTML = `
     <strong>Week to Date:</strong> Pushups: ${totals.week.pushups}, Pullups: ${totals.week.pullups}, Squats: ${totals.week.squats}<br>
     <strong>Month to Date:</strong> Pushups: ${totals.month.pushups}, Pullups: ${totals.month.pullups}, Squats: ${totals.month.squats}<br>
     <strong>Year to Date:</strong> Pushups: ${totals.year.pushups}, Pullups: ${totals.year.pullups}, Squats: ${totals.year.squats}<br>
@@ -153,15 +216,21 @@ function updateSummary() {
   `;
 }
 
-document.getElementById("saveEntry").addEventListener("click", saveTodayEntry);
-document.querySelectorAll(".goals-section input").forEach(input => input.addEventListener("change", saveGoals));
+function addToTotals(t, d) {
+  t.pushups += d.pushups || 0;
+  t.pullups += d.pullups || 0;
+  t.squats += d.squats || 0;
+}
 
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("goalPushups").value = goals.pushups;
-  document.getElementById("goalPullups").value = goals.pullups;
-  document.getElementById("goalSquats").value = goals.squats;
-  updateProgress();
+window.addEventListener('DOMContentLoaded', () => {
+  const savedGoals = JSON.parse(localStorage.getItem('goals'));
+  if (savedGoals) {
+    goals = savedGoals;
+    document.getElementById('goalPushups').value = goals.pushups;
+    document.getElementById('goalPullups').value = goals.pullups;
+    document.getElementById('goalSquats').value = goals.squats;
+  }
+  updateProgressBars();
   renderCalendar();
   updateSummary();
-  calculateStreak();
 });
