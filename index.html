@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="theme-color" content="#ffffff" />
+  <title>Fitness Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <h1>Daily Fitness Tracker</h1>
+    </header>
+
+    <section class="goals-section">
+      <h2>Set Your Daily Goals</h2>
+      <div class="goal-inputs">
+        <label>Push-ups: <input type="number" id="goalPushups" value="200" /></label>
+        <label>Pull-ups: <input type="number" id="goalPullups" value="20" /></label>
+        <label>Air Squats: <input type="number" id="goalSquats" value="200" /></label>
+      </div>
+    </section>
+
+    <section class="entry-section">
+      <h2>Today's Activity</h2>
+      <div class="circle-progress-container">
+        <div class="circle-progress" id="ringPushups">
+          <svg><circle class="bg" /><circle class="fg" /></svg>
+          <div class="circle-label">Push-ups</div>
+          <div class="circle-value" id="ringPushupsValue">0</div>
+        </div>
+        <div class="circle-progress" id="ringPullups">
+          <svg><circle class="bg" /><circle class="fg" /></svg>
+          <div class="circle-label">Pull-ups</div>
+          <div class="circle-value" id="ringPullupsValue">0</div>
+        </div>
+        <div class="circle-progress" id="ringSquats">
+          <svg><circle class="bg" /><circle class="fg" /></svg>
+          <div class="circle-label">Squats</div>
+          <div class="circle-value" id="ringSquatsValue">0</div>
+        </div>
+      </div>
+      <div class="entry-inputs">
+        <label>Push-ups: <input type="number" id="pushups" /></label>
+        <label>Pull-ups: <input type="number" id="pullups" /></label>
+        <label>Air Squats: <input type="number" id="squats" /></label>
+        <label>Dead Hang (mm:ss): <input type="text" id="deadHang" placeholder="1:30" /></label>
+        <button id="saveEntry">Save Entry</button>
+      </div>
+    </section>
+
+    <section class="calendar-section">
+      <h2>Calendar View - <span id="calendarMonthYear"></span></h2>
+      <div id="calendar"></div>
+    </section>
+
+    <section class="summary-section">
+      <h2>Progress Summary</h2>
+      <div id="summary"></div>
+      <div id="streak">🔥 Current Streak: <span id="streakCount">0</span> days</div>
+    </section>
+  </div>
+
+  <!-- Modal for editing past entries -->
+  <div id="editModal" class="modal hidden">
+    <div class="modal-content">
+      <span class="close-button" id="closeModal">&times;</span>
+      <h3>Edit Entry for <span id="editDateLabel"></span></h3>
+      <label>Push-ups: <input type="number" id="editPushups" /></label>
+      <label>Pull-ups: <input type="number" id="editPullups" /></label>
+      <label>Air Squats: <input type="number" id="editSquats" /></label>
+      <label>Dead Hang (mm:ss): <input type="text" id="editDeadHang" /></label>
+      <button id="saveEdit">Save Changes</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
