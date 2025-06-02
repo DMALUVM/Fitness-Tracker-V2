@@ -26,29 +26,19 @@
 
     <section class="entry-section">
       <h2>Today's Activity</h2>
-      <div class="circle-progress-container">
-        <div class="circle-progress" id="ringPushups">
-          <svg><circle class="bg" /><circle class="fg" /></svg>
-          <div class="circle-label">Push-ups</div>
-          <div class="circle-value" id="ringPushupsValue">0</div>
-        </div>
-        <div class="circle-progress" id="ringPullups">
-          <svg><circle class="bg" /><circle class="fg" /></svg>
-          <div class="circle-label">Pull-ups</div>
-          <div class="circle-value" id="ringPullupsValue">0</div>
-        </div>
-        <div class="circle-progress" id="ringSquats">
-          <svg><circle class="bg" /><circle class="fg" /></svg>
-          <div class="circle-label">Squats</div>
-          <div class="circle-value" id="ringSquatsValue">0</div>
-        </div>
-      </div>
       <div class="entry-inputs">
         <label>Push-ups: <input type="number" id="pushups" /></label>
+        <div class="progress-bar" id="progressPushups"><div></div></div>
+
         <label>Pull-ups: <input type="number" id="pullups" /></label>
+        <div class="progress-bar" id="progressPullups"><div></div></div>
+
         <label>Air Squats: <input type="number" id="squats" /></label>
+        <div class="progress-bar" id="progressSquats"><div></div></div>
+
         <label>Dead Hang (mm:ss): <input type="text" id="deadHang" placeholder="1:30" /></label>
         <button id="saveEntry">Save Entry</button>
+        <span id="syncStatus" class="sync-status"></span>
       </div>
     </section>
 
@@ -60,7 +50,6 @@
     <section class="summary-section">
       <h2>Progress Summary</h2>
       <div id="summary"></div>
-      <div id="streak">🔥 Current Streak: <span id="streakCount">0</span> days</div>
     </section>
   </div>
 
