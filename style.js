@@ -1,3 +1,5 @@
+// script.js – Fitness Tracker App
+
 const defaultGoals = {
   pushups: 200,
   pullups: 20,
@@ -52,7 +54,7 @@ function syncToGoogleSheets(date, entry) {
   status.textContent = 'Saving...';
   status.className = 'sync-status loading';
 
-  fetch("https://script.google.com/macros/s/AKfycby6_cBMbcJ4fsBvAfwOJe0gfzhNZWCE7onx5iuAMoUnFFlD2WHRVoMKDWciO4LpAva7/exec", {
+  fetch("https://script.google.com/macros/s/AKfycbwiDko2B2b71RrXlbeQ1ahH6iHnw_mZidT4H6eIbzaVME6UxQ3hpv4xbmxOIgsoODN7/exec", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
