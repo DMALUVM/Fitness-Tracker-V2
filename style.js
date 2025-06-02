@@ -1,3 +1,4 @@
+```javascript
 // script.js – Fitness Tracker App
 
 const defaultGoals = {
@@ -10,6 +11,63 @@ let goals = { ...defaultGoals };
 let activityData = JSON.parse(localStorage.getItem('activityData') || '{}');
 const todayStr = new Date().toISOString().split('T')[0];
 
+window.addEventListener('DOMContentLoaded', () => {
+  const savedGoals = JSON.parse(localStorage.getItem('goals'));
+  if (savedGoals) {
+    goals = savedGoals;
+    document.getElementById('goalPushups').value = goals.pushups;
+    document.getElementById('goalPullups').value = goals.pullups;
+    document.getElementById('goalSquats').value = goals.squats;
+  }
+  updateProgressBars();
+  renderCalendar();
+  updateSummary();
+  renderHistoryTable();
+});
+
+// Validate form inputs (used for both main and edit forms)
+function validateForm(isEdit = false) {
+  let isValid = true;
+  const prefix = isEdit ? 'edit' : '';
+  const errors = {};
+
+  const pushups = document.getElementById(`${prefix}Pushups`).value;
+  if (isNaN(pushups) || pushups < 0) {
+    errors[`${prefix}Pushups`] = 'Please enter a valid non-negative number';
+    isValid = false;
+  }
+
+  const pullups = document.getElementById(`${prefix}Pullups`).value;
+  if (isNaN(pullups) || pullups < 0) {
+    errors[`${prefix}Pullups`] = 'Please enter a valid non-negative number';
+    isValid = false;
+  }
+
+  const squats = document.getElementById(`${prefix}Squats`).value;
+  if (isNaN(squats) || squats < 0) {
+    errors[`${prefix}Squats`] = 'Please enter a valid non-negative number';
+    isValid = false;
+  }
+
+  const deadHang = document.getElementById(`${prefix}DeadHang`).value;
+  if (deadHang && !/^\d+:\d{2}$/.test(deadHang)) {
+    errors[`${prefix}DeadHang`] = 'Please enter time in mm:ss format (e.g., 1:30)';
+    isValid = false;
+  }
+
+  // Show/hide error messages
+  Object.keys(errors).forEach(field => {
+    const errorElement = document.getElementById(`${field}-error`);
+    errorElement.textContent = errors[field];
+    errorElement.style.display = 'block';
+  });
+  document.querySelectorAll(`#${prefix}workout-form .invalid-feedback, #${prefix}edit-form .invalid-feedback`).forEach(el => {
+    if (!errors[el.id.replace('-error', '')]) el.style.display = 'none';
+  });
+
+  return isValid;
+}
+
 function saveGoals() {
   goals.pushups = parseInt(document.getElementById('goalPushups').value) || 0;
   goals.pullups = parseInt(document.getElementById('goalPullups').value) || 0;
@@ -18,9 +76,13 @@ function saveGoals() {
   updateProgressBars();
   renderCalendar();
   updateSummary();
+  renderHistoryTable();
 }
 
-function saveTodayEntry() {
+function saveTodayEntry(e) {
+  e.preventDefault();
+  if (!validateForm()) return;
+
   const newEntry = {
     pushups: parseInt(document.getElementById('pushups').value) || 0,
     pullups: parseInt(document.getElementById('pullups').value) || 0,
@@ -41,7 +103,8 @@ function saveTodayEntry() {
   updateProgressBars();
   renderCalendar();
   updateSummary();
-  syncToGoogleSheets(todayStr, updatedEntry);
+  renderHistoryTable();
+  sendToGoogleSheets(todayStr, updatedEntry);
 
   document.getElementById('pushups').value = '';
   document.getElementById('pullups').value = '';
@@ -49,12 +112,8 @@ function saveTodayEntry() {
   document.getElementById('deadHang').value = '';
 }
 
-function syncToGoogleSheets(date, entry) {
-  const status = document.getElementById('syncStatus');
-  status.textContent = 'Saving...';
-  status.className = 'sync-status loading';
-
-  fetch("https://script.google.com/macros/s/AKfycbwiDko2B2b71RrXlbeQ1ahH6iHnw_mZidT4H6eIbzaVME6UxQ3hpv4xbmxOIgsoODN7/exec", {
+function sendToGoogleSheets(date, entry) {
+  fetch("https://script.google.com/macros/s/AKfycby6_cBMbcJ4fsBvAfwOJe0gfzhNZWCE7onx5iuAMoUnFFlD2WHRVoMKDWciO4LpAva7/exec", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -66,17 +125,8 @@ function syncToGoogleSheets(date, entry) {
     })
   })
   .then(res => res.text())
-  .then(msg => {
-    status.textContent = 'Saved ✅';
-    status.className = 'sync-status success';
-    setTimeout(() => status.textContent = '', 3000);
-    console.log("✅ Google Sheets Backup:", msg);
-  })
-  .catch(err => {
-    status.textContent = 'Error ❌';
-    status.className = 'sync-status error';
-    console.error("❌ Google Sheets Backup Failed:", err);
-  });
+  .then(msg => console.log("✅ Google Sheets Backup:", msg))
+  .catch(err => console.error("❌ Google Sheets Backup Failed:", err));
 }
 
 function updateProgressBars() {
@@ -105,17 +155,10 @@ function updateBarWithTotal(id, value, goal) {
   barContainer.querySelector('.bar-total-label').textContent = `${value}/${goal}`;
 }
 
-document.getElementById('saveEntry').addEventListener('click', saveTodayEntry);
-document.querySelectorAll('.goals-section input').forEach(input => {
-  input.addEventListener('change', saveGoals);
-});
+function saveEditEntry(e) {
+  e.preventDefault();
+  if (!validateForm(true)) return;
 
-document.getElementById('closeModal').addEventListener('click', () => {
-  document.getElementById('editModal').classList.add('hidden');
-});
-document.getElementById('saveEdit').addEventListener('click', saveEditEntry);
-
-function saveEditEntry() {
   const dateStr = document.getElementById('editModal').dataset.date;
   const entry = {
     pushups: parseInt(document.getElementById('editPushups').value) || 0,
@@ -127,9 +170,22 @@ function saveEditEntry() {
   localStorage.setItem('activityData', JSON.stringify(activityData));
   renderCalendar();
   updateSummary();
+  renderHistoryTable();
   if (dateStr === todayStr) updateProgressBars();
-  syncToGoogleSheets(dateStr, entry);
+  sendToGoogleSheets(dateStr, entry);
   document.getElementById('editModal').classList.add('hidden');
+}
+
+function deleteEntry(dateStr) {
+  if (confirm('Are you sure you want to delete this workout entry?')) {
+    delete activityData[dateStr];
+    localStorage.setItem('activityData', JSON.stringify(activityData));
+    renderCalendar();
+    updateSummary();
+    renderHistoryTable();
+    if (dateStr === todayStr) updateProgressBars();
+    // Note: No Google Sheets API call to delete; consider adding if supported
+  }
 }
 
 function renderCalendar() {
@@ -224,15 +280,71 @@ function addToTotals(t, d) {
   t.squats += d.squats || 0;
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  const savedGoals = JSON.parse(localStorage.getItem('goals'));
-  if (savedGoals) {
-    goals = savedGoals;
-    document.getElementById('goalPushups').value = goals.pushups;
-    document.getElementById('goalPullups').value = goals.pullups;
-    document.getElementById('goalSquats').value = goals.squats;
-  }
-  updateProgressBars();
-  renderCalendar();
-  updateSummary();
+// New function to render workout history table
+function renderHistoryTable(sortKey = 'date', ascending = true) {
+  const tbody = document.getElementById('workout-history');
+  tbody.innerHTML = '';
+
+  const entries = Object.entries(activityData).map(([date, data]) => ({
+    date,
+    ...data
+  }));
+
+  entries.sort((a, b) => {
+    if (sortKey === 'date') return ascending ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date);
+    if (sortKey === 'deadHang') return ascending ? (a.deadHang || '').localeCompare(b.deadHang || '') : (b.deadHang || '').localeCompare(a.deadHang || '');
+    return ascending ? (a[sortKey] || 0) - (b[sortKey] || 0) : (b[sortKey] || 0) - (a[sortKey] || 0);
+  });
+
+  entries.forEach(entry => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${entry.date}</td>
+      <td>${entry.pushups}</td>
+      <td>${entry.pullups}</td>
+      <td>${entry.squats}</td>
+      <td>${entry.deadHang || '-'}</td>
+      <td>
+        <button class="btn btn-outline-primary btn-sm edit-btn" data-date="${entry.date}">Edit</button>
+        <button class="btn btn-outline-danger btn-sm delete-btn" data-date="${entry.date}">Delete</button>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  // Add event listeners for edit/delete buttons
+  document.querySelectorAll('.edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => openEditModal(btn.dataset.date));
+  });
+  document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', () => deleteEntry(btn.dataset.date));
+  });
+
+  // Update sortable column indicators
+  document.querySelectorAll('.sortable').forEach(th => {
+    th.classList.remove('asc', 'desc');
+    if (th.dataset.sort === sortKey) {
+      th.classList.add(ascending ? 'asc' : 'desc');
+    }
+  });
+}
+
+// Event listeners
+document.getElementById('workout-form').addEventListener('submit', saveTodayEntry);
+document.getElementById('edit-form').addEventListener('submit', saveEditEntry);
+document.querySelectorAll('.goals-section input').forEach(input => {
+  input.addEventListener('change', saveGoals);
 });
+document.getElementById('closeModal').addEventListener('click', () => {
+  document.getElementById('editModal').classList.add('hidden');
+});
+
+// Table sorting
+document.querySelectorAll('.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const sortKey = th.dataset.sort;
+    const ascending = !th.classList.contains('asc');
+    renderHistoryTable(sortKey, ascending);
+  });
+});
+```
