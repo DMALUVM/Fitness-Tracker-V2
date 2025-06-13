@@ -1,12 +1,11 @@
-```css
 /* style.css – Fitness Tracker App */
 
-/* Original styles preserved */
 body {
   margin: 0;
   font-family: Arial, sans-serif;
   background-color: #f9f9f9;
   color: #333;
+  line-height: 1.6;
 }
 
 .app-container {
@@ -18,7 +17,7 @@ body {
 header h1 {
   text-align: center;
   font-size: 1.8em;
-  margin-bottom: 10px; /* Adjusted for subtitle */
+  margin-bottom: 20px;
 }
 
 section {
@@ -40,12 +39,19 @@ label {
 input[type="number"],
 input[type="text"] {
   width: 100%;
-  padding: 8px;
+  padding: 10px;
   font-size: 1em;
   box-sizing: border-box;
   margin-bottom: 10px;
   border: 1px solid #ccc;
   border-radius: 5px;
+  transition: border 0.2s ease;
+}
+
+input:focus {
+  border-color: #007bff;
+  outline: none;
+  box-shadow: 0 0 3px rgba(0, 123, 255, 0.4);
 }
 
 button {
@@ -57,10 +63,15 @@ button {
   border-radius: 8px;
   cursor: pointer;
   margin-top: 10px;
+  transition: background-color 0.3s ease, transform 0.1s ease;
 }
 
 button:hover {
   background-color: #0056b3;
+}
+
+button:active {
+  transform: scale(0.97);
 }
 
 .progress-bar {
@@ -106,10 +117,14 @@ button:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
+  transition: background-color 0.2s ease;
 }
 
-.calendar-day:hover {
+.calendar-day:hover,
+.calendar-day:focus {
   background-color: #f0f0f0;
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
 }
 
 .date-label {
@@ -130,6 +145,7 @@ button:hover {
   border-radius: 8px;
 }
 
+/* Modal Styling */
 .modal {
   position: fixed;
   top: 0;
@@ -141,6 +157,7 @@ button:hover {
   justify-content: center;
   align-items: center;
   z-index: 9999;
+  animation: fadeIn 0.2s ease-out;
 }
 
 .modal-content {
@@ -150,6 +167,17 @@ button:hover {
   width: 90%;
   max-width: 400px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  animation: scaleUp 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.95); }
+  to { transform: scale(1); }
 }
 
 .hidden {
@@ -159,70 +187,23 @@ button:hover {
 .close-button {
   float: right;
   font-size: 1.5em;
-  cursor: pointer;
-}
-
-/* New styles for improvements */
-.card {
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  background: #fff;
-}
-
-.btn-primary {
-  background-color: #007bff;
+  background: none;
   border: none;
-  transition: background-color 0.3s;
-}
-
-.btn-primary:hover {
-  background-color: #0056b3;
-}
-
-.btn-outline-primary, .btn-outline-danger {
-  transition: background-color 0.3s, color 0.3s;
-}
-
-.btn-outline-primary:hover {
-  background-color: #007bff;
-  color: white;
-}
-
-.btn-outline-danger:hover {
-  background-color: #dc3545;
-  color: white;
-}
-
-.table-striped tbody tr:nth-of-type(odd) {
-  background-color: #f2f2f2;
-}
-
-.table-hover tbody tr:hover {
-  background-color: #e9ecef;
-}
-
-.sortable {
   cursor: pointer;
-  position: relative;
 }
 
-.sortable::after {
-  content: '↕';
-  margin-left: 5px;
-  font-size: 0.8em;
-}
+/* Responsive enhancements */
+@media (max-width: 500px) {
+  .app-container {
+    padding: 10px;
+  }
 
-.sortable.asc::after {
-  content: '↑';
-}
+  input[type="number"],
+  input[type="text"] {
+    font-size: 1em;
+  }
 
-.sortable.desc::after {
-  content: '↓';
+  button {
+    width: 100%;
+  }
 }
-
-.invalid-feedback {
-  color: #dc3545;
-  font-size: 0.9em;
-  display: none;
-}
-```
